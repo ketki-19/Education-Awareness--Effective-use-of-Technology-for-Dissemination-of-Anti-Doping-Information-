@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CleanSport 2026 | Elite Anti-Doping Platform</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#070b19',
+                        cardbg: '#0f172a',
+                        bordercolor: '#1e293b',
+                        cyanaccent: '#06b6d4',
+                        cyanhover: '#0891b2',
+                        tealborder: '#22d3ee',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-darkbg text-zinc-100 font-sans antialiased min-h-screen flex flex-col selection:bg-cyanaccent selection:text-white" x-data="cleanSportApp()">
+
+    <!-- TOP NAVIGATION BAR -->
+    <header class="sticky top-0 z-50 bg-darkbg/90 backdrop-blur-md border-b border-cyanaccent/20">
+        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            
+            <!-- Logo Brand -->
+            <div class="flex items-center space-x-3 cursor-pointer" @click="activeTab = currentUser ? (currentUser.role === 'Admin' ? 'admin-dash' : 'athlete-dash') : 'home'">
+                <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-cyan-600 to-teal-400 flex items-center justify-center font-black text-white text-xl shadow-lg shadow-cyan-500/20">CS</div>
+                <div>
+                    <span class="text-lg font-black tracking-wider text-white">CLEAN<span class="text-cyan-400">SPORT</span></span>
+                    <span class="text-[9px] uppercase tracking-widest text-zinc-400 block font-bold" x-text="t('sub_brand')">WADA 2026 Integrity Platform</span>
+                </div>
+            </div>
+
+            <!-- Nav Links (Desktop) -->
+            <nav class="hidden lg:flex items-center space-x-1 text-xs font-semibold">
+                <button @click="activeTab = 'home'" :class="activeTab === 'home' ? 'text-cyan-400 bg-cyan-950/60 border border-cyan-800/50 shadow-sm' : 'text-zinc-400 hover:text-white'" class="px-4 py-2 rounded-xl transition" x-text="t('nav_home')">Home</button>
+                <button @click="activeTab = 'substances'" :class="activeTab === 'substances' ? 'text-cyan-400 bg-cyan-950/60 border border-cyan-800/50 shadow-sm' : 'text-zinc-400 hover:text-white'" class="px-4 py-2 rounded-xl transition" x-text="t('nav_substances')">Substance Database</button>
+                <button @click="activeTab = 'study'" :class="activeTab === 'study' ? 'text-cyan-400 bg-cyan-950/60 border border-cyan-800/50 shadow-sm' : 'text-zinc-400 hover:text-white'" class="px-4 py-2 rounded-xl transition" x-text="t('nav_study')">Study PDFs</button>
+                <button @click="startQuizSession()" :class="activeTab === 'quizzes' ? 'text-cyan-400 bg-cyan-950/60 border border-cyan-800/50 shadow-sm' : 'text-zinc-400 hover:text-white'" class="px-4 py-2 rounded-xl transition" x-text="t('nav_quizzes')">Quizzes</button>
+                <template x-if="currentUser">
+                    <button @click="activeTab = currentUser.role === 'Admin' ? 'admin-dash' : 'athlete-dash'" :class="activeTab.includes('dash') ? 'text-cyan-400 bg-cyan-950/60 border border-cyan-800/50 shadow-sm' : 'text-zinc-400 hover:text-white'" class="px-4 py-2 rounded-xl transition" x-text="t('nav_dashboard')">Dashboard</button>
+                </template>
+            </nav>
+
+            <!-- Right Actions -->
+            <div class="flex items-center space-x-4">
+                <button @click="toggleLang()" class="px-3 py-1.5 bg-cardbg border border-bordercolor rounded-xl text-xs font-bold text-cyan-400 hover:border-cyan-400 transition">
+                    <span x-text="lang === 'en' ? '🌐 हिन्दी (HI)' : '🌐 English (EN)'"></span>
+                </button>
+
+                <template x-if="!currentUser">
+                    <button @click="activeTab = 'login'" class="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-extrabold rounded-xl text-xs transition shadow-lg shadow-cyan-600/30" x-text="t('nav_login')">
+                        Secure Portal Login
+                    </button>
+                </template>
+                <template x-if="currentUser">
+                    <div class="flex items-center space-x-3 bg-cardbg px-3.5 py-1.5 rounded-2xl border border-bordercolor">
+                        <div class="text-right">
+                            <p class="text-xs font-extrabold text-cyan-400" x-text="currentUser.name"></p>
+                            <p class="text-[9px] text-zinc-400 uppercase tracking-widest font-bold" x-text="currentUser.role"></p>
+                        </div>
+                        <button @click="logout()" class="px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-bold transition" x-text="t('logout')">Logout</button>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN BODY VIEWCONTAINER -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-6 md:p-10">
+
+        <!-- 1. HOME VIEW -->
+        <div x-show="activeTab === 'home'" class="space-y-12">
+            <div class="relative overflow-hidden bg-gradient-to-br from-cyan-950/30 via-cardbg to-darkbg rounded-3xl p-8 md:p-16 border border-bordercolor shadow-2xl">
+                <div class="absolute -right-20 -bottom-20 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="max-w-2xl relative z-10">
+                    <span class="px-3.5 py-1.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded-full text-[10px] font-black tracking-widest uppercase" x-text="t('badge_wada')">WADA 2026 Standards Compliant</span>
+                    <h1 class="text-4xl md:text-6xl font-black mt-6 mb-4 text-white tracking-tight leading-none" x-html="t('hero_title')">
+                        Education & <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-teal-300">Awareness Platform</span>
+                    </h1>
+                    <p class="text-zinc-400 text-sm md:text-base leading-relaxed mb-8" x-text="t('hero_desc')">
+                        Effective use of digital technology for dissemination of anti-doping information. Empowering athletes and coaches with verified substance databases, PDF study resources, and strict clean sport regulations.
+                    </p>
+                    <div class="flex flex-wrap gap-4">
+                        <button @click="activeTab = 'substances'" class="px-6 py-3.5 bg-cyan-600 hover:bg-cyan-500 text-white font-extrabold rounded-2xl text-xs transition shadow-lg shadow-cyan-600/30" x-text="t('btn_substances')">Explore Substances</button>
+                        <button @click="startQuizSession()" class="px-6 py-3.5 bg-cardbg hover:bg-zinc-800 border border-bordercolor text-white font-extrabold rounded-2xl text-xs transition" x-text="t('btn_quiz')">Take Assessment Quiz</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-cardbg p-6 rounded-3xl border border-bordercolor relative overflow-hidden group hover:border-cyan-500/50 transition">
+                    <p class="text-[10px] font-extrabold text-zinc-400 uppercase tracking-widest" x-text="t('stat_athletes')">Registered Athletes</p>
+                    <h3 class="text-3xl font-black text-white mt-2">100</h3>
+                    <p class="text-xs text-cyan-400 mt-2 font-semibold" x-text="t('stat_athletes_sub')">✓ Distributed to 20 Coaches</p>
+                </div>
+                <div class="bg-cardbg p-6 rounded-3xl border border-bordercolor relative overflow-hidden group hover:border-cyan-500/50 transition">
+                    <p class="text-[10px] font-extrabold text-zinc-400 uppercase tracking-widest" x-text="t('stat_coaches')">Expert Coaches</p>
+                    <h3 class="text-3xl font-black text-white mt-2">20</h3>
+                    <p class="text-xs text-cyan-400 mt-2 font-semibold" x-text="t('stat_coaches_sub')">✓ WADA Certified Advisors</p>
+                </div>
+                <div class="bg-cardbg p-6 rounded-3xl border border-bordercolor relative overflow-hidden group hover:border-cyan-500/50 transition">
+                    <p class="text-[10px] font-extrabold text-zinc-400 uppercase tracking-widest" x-text="t('stat_substances')">Prohibited Substances</p>
+                    <h3 class="text-3xl font-black text-white mt-2">50+</h3>
+                    <p class="text-xs text-cyan-400 mt-2 font-semibold" x-text="t('stat_substances_sub')">✓ WADA 2026 Verified List</p>
+                </div>
+                <div class="bg-cardbg p-6 rounded-3xl border border-bordercolor relative overflow-hidden group hover:border-cyan-500/50 transition">
+                    <p class="text-[10px] font-extrabold text-zinc-400 uppercase tracking-widest" x-text="t('stat_compliance')">Learning Compliance</p>
+                    <h3 class="text-3xl font-black text-white mt-2">94.8%</h3>
+                    <p class="text-xs text-cyan-400 mt-2 font-semibold" x-text="t('stat_compliance_sub')">✓ Active Completion Rate</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. SUBSTANCE DATABASE VIEW -->
+        <div x-show="activeTab === 'substances'" class="space-y-8">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-cardbg p-6 rounded-3xl border border-bordercolor">
+                <div>
+                    <h2 class="text-2xl font-black text-white" x-text="t('sub_db_title')">WADA Prohibited Substance Database</h2>
+                    <p class="text-xs text-zinc-400 mt-1" x-text="t('sub_db_desc')">Explore regulated categories, medical uses, and detailed compliance guidance.</p>
+                </div>
+                <input type="text" x-model="searchQuery" :placeholder="t('search_placeholder')" class="px-4 py-3 w-full md:w-80 rounded-2xl bg-darkbg border border-bordercolor text-white text-xs focus:outline-none focus:border-cyan-400">
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <template x-for="item in filteredSubstances" :key="item.name">
+                    <div class="bg-cardbg p-6 rounded-3xl border border-bordercolor flex flex-col justify-between hover:border-cyan-400/40 transition">
+                        <div>
+                            <div class="flex justify-between items-start mb-4">
+                                <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider"
+                                    :class="{
+                                        'bg-red-500/10 text-red-400 border border-red-500/20': item.status === 'Prohibited',
+                                        'bg-amber-500/10 text-amber-400 border border-amber-500/20': item.status === 'Conditional',
+                                        'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20': item.status === 'TUE Required'
+                                    }" x-text="item.status"></span>
+                                <span class="text-xs font-bold text-cyan-400" x-text="item.category"></span>
+                            </div>
+                            <h3 class="text-lg font-black text-white" x-text="item.name"></h3>
+                            <p class="text-xs text-zinc-400 mt-2 leading-relaxed" x-text="item.desc"></p>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-bordercolor flex justify-between items-center text-xs">
+                            <span class="text-zinc-500 font-semibold text-[10px]" x-text="t('verified_wada')">WADA 2026 Verified</span>
+                            <button @click="openGuidance(item)" class="text-cyan-400 font-extrabold hover:underline bg-cyan-500/10 px-3.5 py-1.5 rounded-xl border border-cyan-500/20" x-text="t('view_guidance')">View Guidance &rarr;</button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- 3. STUDY MATERIALS VIEW -->
+        <div x-show="activeTab === 'study'" class="space-y-8">
+            <div class="bg-cardbg p-6 rounded-3xl border border-bordercolor">
+                <h2 class="text-2xl font-black text-white" x-text="t('pdf_section_title')">Official Anti-Doping Study PDFs</h2>
+                <p class="text-xs text-zinc-400 mt-1" x-text="t('pdf_section_desc')">Preview official WADA & NADA compliant educational handbooks featuring proper 6-page structured content.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <template x-for="pdf in pdfList" :key="pdf.id">
+                    <div class="bg-cardbg p-6 rounded-3xl border border-bordercolor flex flex-col justify-between hover:border-cyan-400/50 transition">
+                        <div>
+                            <span class="text-[10px] bg-cyan-500/10 text-cyan-400 px-3 py-1 rounded-full font-bold uppercase tracking-wider border border-cyan-500/20" x-text="pdf.badge">PDF Handbook</span>
+                            <h3 class="text-base font-black text-white mt-3" x-text="pdf.title"></h3>
+                            <p class="text-xs text-zinc-400 mt-2" x-text="pdf.desc"></p>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-bordercolor">
+                            <button @click="previewPDF(pdf)" class="w-full py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-extrabold rounded-2xl text-xs transition shadow flex items-center justify-center gap-2">
+                                <span x-text="t('preview_btn')">📖 View PDF (6 Pages)</span>
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- 4. QUIZZES VIEW (WITH 10-MIN TIMER) -->
+        <div x-show="activeTab === 'quizzes'" class="max-w-3xl mx-auto space-y-6">
+            <div class="bg-cardbg p-8 md:p-10 rounded-3xl border border-bordercolor shadow-xl">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+                    <span class="px-3.5 py-1 bg-cyan-500/10 text-cyan-400 rounded-full text-[10px] font-black uppercase tracking-wider border border-cyan-500/20" x-text="t('quiz_progress') + (activeQuizIndex + 1) + ' / ' + quizList.length">Assessment Question</span>
+                    <div class="flex items-center gap-4">
+                        <span class="px-3 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-extrabold rounded-full flex items-center gap-1.5">
+                            ⏱️ <span x-text="formatTime(quizTimeLeft)"></span>
+                        </span>
+                        <span class="text-xs text-cyan-400 font-bold"><span x-text="t('score_label')">Score:</span> <span x-text="quizScore"></span> / 200</span>
+                    </div>
+                </div>
+                <h2 class="text-xl md:text-2xl font-black text-white mb-6" x-text="currentQuiz.question"></h2>
+                
+                <div class="space-y-3">
+                    <template x-for="(option, idx) in currentQuiz.options" :key="idx">
+                        <label class="block p-4 bg-darkbg rounded-2xl border border-bordercolor cursor-pointer hover:border-cyan-400/50 transition text-xs md:text-sm font-semibold flex items-center space-x-3">
+                            <input type="radio" name="quizOption" :value="idx" x-model.number="selectedOption" class="text-cyan-500 focus:ring-cyan-400">
+                            <span x-text="option"></span>
+                        </label>
+                    </template>
+                </div>
+
+                <div class="mt-8 flex justify-between items-center pt-6 border-t border-bordercolor">
+                    <button @click="submitQuizAnswer()" class="px-6 py-3 bg-cyan-600 text-white font-black rounded-2xl text-xs hover:bg-cyan-500 transition shadow-lg shadow-cyan-600/30" x-text="t('submit_answer')">Submit Answer & Next &rarr;</button>
+                    <span class="text-xs text-zinc-400 font-medium" x-text="quizFeedback"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. LOGIN VIEW -->
+        <div x-show="activeTab === 'login'" class="max-w-md mx-auto py-12">
+            <div class="bg-cardbg p-8 md:p-10 rounded-3xl shadow-2xl border border-bordercolor">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-black text-white" x-text="t('login_title')">Secure Portal Login</h2>
+                    <p class="text-xs text-zinc-400 mt-1" x-text="t('login_subtitle')">Authenticate using Google OAuth or valid name email</p>
+                </div>
+
+                <button @click="googleOAuthLogin()" class="w-full mb-6 py-3.5 px-4 bg-white hover:bg-zinc-100 text-zinc-800 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-3 shadow-md">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+                        <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.19v3.15C3.17 21.3 7.23 24 12 24z"/>
+                        <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.19C.43 8.12 0 9.87 0 11.7s.43 3.58 1.19 5.12l4.09-2.55z"/>
+                        <path fill="#EA4335" d="M12 4.75c1.76 0 3.34.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.23 0 3.17 2.7 1.19 6.58l4.09 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                    </svg>
+                    <span x-text="t('google_btn')">Continue with Google OAuth 2.0</span>
+                </button>
+
+                <div class="relative flex py-2 items-center mb-6">
+                    <div class="flex-grow border-t border-bordercolor"></div>
+                    <span class="flex-shrink mx-4 text-zinc-500 text-[10px] uppercase font-bold" x-text="t('or_email')">Or with email</span>
+                    <div class="flex-grow border-t border-bordercolor"></div>
+                </div>
+
+                <form @submit.prevent="handleLogin()" class="space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1" x-text="t('email_label')">Email Address (Name letters only, e.g. rajesh@gmail.com)</label>
+                        <input type="text" x-model="loginEmail" placeholder="e.g. rajesh@gmail.com" required class="w-full px-4 py-3.5 bg-darkbg border border-bordercolor rounded-2xl text-white text-xs focus:outline-none focus:border-cyan-400">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1" x-text="t('password_label')">Password (Min 8 chars, Uppercase, Lowercase, Number)</label>
+                        <input type="password" x-model="loginPassword" placeholder="e.g. SecurePass1" required class="w-full px-4 py-3.5 bg-darkbg border border-bordercolor rounded-2xl text-white text-xs focus:outline-none focus:border-cyan-400">
+                    </div>
+                    <div x-show="loginError" class="text-xs text-red-400 font-bold bg-red-500/10 border border-red-500/20 p-3 rounded-2xl text-center" x-text="loginError"></div>
+                    
+                    <button type="submit" class="w-full py-4 bg-cyan-600 hover:bg-cyan-500 text-white font-black rounded-2xl text-xs transition shadow-lg shadow-cyan-600/30 uppercase tracking-wider" x-text="t('login_btn')">Login to Platform</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 6. ADMIN DASHBOARD -->
+        <div x-show="activeTab === 'admin-dash'" class="space-y-8">
+            <div class="flex justify-between items-center bg-cardbg p-6 md:p-8 rounded-3xl border border-bordercolor">
+                <div>
+                    <h2 class="text-2xl font-black text-white" x-text="t('admin_dash_title')">Admin Control Dashboard</h2>
+                    <p class="text-xs text-zinc-400 mt-1" x-text="t('admin_dash_desc')">Full platform management, athlete assignments, and system audit logs.</p>
+                </div>
+                <span class="px-4 py-1.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-extrabold text-xs rounded-full" x-text="t('admin_badge')">Super Admin Active</span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-cardbg p-6 rounded-3xl border border-bordercolor"><p class="text-[10px] font-extrabold text-zinc-400 uppercase" x-text="t('stat_athletes')">Total Athletes</p><h3 class="text-3xl font-black text-white mt-1">100</h3></div>
+                <div class="bg-cardbg p-6 rounded-3xl border border-bordercolor"><p class="text-[10px] font-extrabold text-zinc-400 uppercase" x-text="t('stat_coaches')">Total Coaches</p><h3 class="text-3xl font-black text-white mt-1">20</h3></div>
+                <div class="bg-cardbg p-6 rounded-3xl border border-bordercolor"><p class="text-[10px] font-extrabold text-zinc-400 uppercase" x-text="t('stat_substances')">Substances Database</p><h3 class="text-3xl font-black text-white mt-1">50+</h3></div>
+                <div class="bg-cardbg p-6 rounded-3xl border border-bordercolor"><p class="text-[10px] font-extrabold text-zinc-400 uppercase" x-text="t('stat_quizzes')">Assessment Quizzes</p><h3 class="text-3xl font-black text-white mt-1">Active</h3></div>
+            </div>
+        </div>
+
+        <!-- 7. ATHLETE DASHBOARD -->
+        <div x-show="activeTab === 'athlete-dash'" class="space-y-8">
+            <div class="flex justify-between items-center bg-cardbg p-6 md:p-8 rounded-3xl border border-bordercolor">
+                <div>
+                    <h2 class="text-2xl font-black text-white" x-text="t('athlete_dash_title')">Athlete Learning Dashboard</h2>
+                    <p class="text-xs text-zinc-400 mt-1" x-text="t('athlete_dash_desc')">Track your anti-doping education progress and quiz scores.</p>
+                </div>
+                <span class="px-4 py-1.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-extrabold text-xs rounded-full" x-text="currentUser ? currentUser.name : 'Athlete Portal'"></span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-cardbg p-6 rounded-3xl border border-bordercolor"><p class="text-[10px] font-extrabold text-zinc-400 uppercase" x-text="t('learning_progress')">Learning Progress</p><h3 class="text-3xl font-black text-white mt-1">88%</h3><div class="w-full bg-darkbg h-2 rounded-full mt-4 overflow-hidden border border-bordercolor"><div class="bg-cyan-500 h-full w-[88%]"></div></div></div>
+                <div class="bg-cardbg p-6 rounded-3xl border border-bordercolor"><p class="text-[10px] font-extrabold text-zinc-400 uppercase" x-text="t('quiz_avg')">Quiz Score Average</p><h3 class="text-3xl font-black text-white mt-1" x-text="quizScore + ' / 200'"></h3><p class="text-xs text-emerald-400 font-bold mt-2" x-text="t('cert_eligible')">✓ Certificate Eligible</p></div>
+                <div class="bg-cardbg p-6 rounded-3xl border border-bordercolor"><p class="text-[10px] font-extrabold text-zinc-400 uppercase" x-text="t('assigned_status')">Assigned Status</p><h3 class="text-lg font-black text-cyan-400 mt-2" x-text="t('clean_verified')">Clean Sport Verified</h3><p class="text-xs text-zinc-400 mt-1" x-text="t('last_verified')">Last verified: WADA 2026</p></div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- FULLY WORKING FLOATING AI CHATBOT WIDGET -->
+    <div class="fixed bottom-6 right-6 z-50" x-data="{ openChat: false }">
+        <template x-if="!openChat">
+            <button @click="openChat = true" class="w-14 h-14 bg-cyan-600 hover:bg-cyan-500 text-white rounded-full shadow-2xl flex items-center justify-center text-xl transition transform hover:scale-105 border border-cyan-400/40">
+                💬
+            </button>
+        </template>
+        <template x-if="openChat">
+            <div class="bg-cardbg border border-cyan-900/80 rounded-3xl w-80 sm:w-96 shadow-2xl overflow-hidden flex flex-col h-[480px]">
+                <div class="bg-darkbg px-5 py-4 border-b border-bordercolor flex justify-between items-center">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></div>
+                        <span class="text-xs font-black text-white" x-text="t('chat_title')">CleanSport AI Advisor</span>
+                    </div>
+                    <button @click="openChat = false" class="text-zinc-400 hover:text-white font-bold">✕</button>
+                </div>
+                
+                <!-- Chat Messages Stream -->
+                <div class="flex-1 p-4 overflow-y-auto space-y-3 text-xs" id="chatContainer">
+                    <template x-for="msg in chatMessages" :key="msg.text + Math.random()">
+                        <div :class="msg.sender === 'ai' ? 'bg-darkbg border border-bordercolor text-zinc-300' : 'bg-cyan-600 text-white ml-auto max-w-[80%]' " class="p-3 rounded-2xl">
+                            <span class="font-bold text-cyan-400 block mb-1" x-text="msg.sender === 'ai' ? 'CleanSport AI:' : 'You:'"></span>
+                            <span x-text="msg.text"></span>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Chat Input Form -->
+                <div class="p-3 bg-darkbg border-t border-bordercolor flex gap-2">
+                    <input type="text" x-model="chatInputQuery" @keyup.enter="sendAIChatQuery()" placeholder="Ask about WADA rules, substances, TUE..." class="flex-1 bg-cardbg border border-bordercolor rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-400">
+                    <button @click="sendAIChatQuery()" class="px-4 py-2 bg-cyan-600 text-white font-bold rounded-xl text-xs hover:bg-cyan-500 transition" x-text="t('chat_send')">Send</button>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <!-- GUIDANCE MODAL -->
+    <div x-show="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" style="display: none;">
+        <div class="bg-cardbg border border-bordercolor rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl relative">
+            <button @click="showModal = false" class="absolute top-5 right-5 text-zinc-400 hover:text-white font-bold text-lg">✕</button>
+            <span class="px-3 py-1 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-[10px] font-black uppercase rounded-full" x-text="modalItem.status"></span>
+            <h3 class="text-2xl font-black text-white mt-3" x-text="modalItem.name"></h3>
+            <p class="text-xs text-cyan-400 font-semibold mt-1" x-text="'Category: ' + modalItem.category"></p>
+            <div class="mt-4 space-y-3 text-xs text-zinc-300 leading-relaxed bg-darkbg p-4 rounded-2xl border border-bordercolor">
+                <p><strong class="text-cyan-400">Description:</strong> <span x-text="modalItem.desc"></span></p>
+                <p><strong class="text-cyan-400">Medical Uses:</strong> Approved clinical treatment under strict medical supervision and prescribed therapeutic indications.</p>
+                <p><strong class="text-cyan-400">WADA Status:</strong> Strictly regulated under WADA 2026 Prohibited List standards. Verification through official anti-doping portals is mandatory.</p>
+            </div>
+            <button @click="showModal = false" class="mt-6 w-full py-3.5 bg-cyan-600 text-white font-extrabold rounded-2xl text-xs hover:bg-cyan-500 transition" x-text="t('close_modal')">Close Guidance Panel</button>
+        </div>
+    </div>
+
+    <!-- PDF VIEWER MODAL (FULLY DYNAMIC 6 PAGES) -->
+    <div x-show="showPDFModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" style="display: none;">
+        <div class="bg-cardbg border border-bordercolor rounded-3xl p-6 md:p-8 max-w-3xl w-full shadow-2xl relative flex flex-col h-[85vh]">
+            <button @click="showPDFModal = false" class="absolute top-5 right-5 text-zinc-400 hover:text-white font-bold text-lg">✕</button>
+            
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 pb-3 border-b border-bordercolor">
+                <div>
+                    <span class="px-3 py-1 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-[10px] font-black uppercase rounded-full">PDF 6-Page Reader</span>
+                    <h3 class="text-lg font-black text-white mt-1" x-text="previewPDFItem.title"></h3>
+                </div>
+                <div class="flex items-center gap-1.5 bg-darkbg p-1.5 rounded-xl border border-bordercolor self-end sm:self-auto">
+                    <button @click="currentPDFPage > 1 ? currentPDFPage-- : null" class="px-2.5 py-1 bg-cyan-950 text-cyan-400 rounded-lg text-xs font-bold hover:bg-cyan-900 transition">&larr; Prev</button>
+                    <template x-for="p in [1,2,3,4,5,6]" :key="p">
+                        <button @click="currentPDFPage = p" :class="currentPDFPage === p ? 'bg-cyan-600 text-white' : 'text-zinc-400 hover:text-white bg-darkbg'" class="w-7 h-7 rounded-lg text-xs font-bold transition flex items-center justify-center" x-text="p"></button>
+                    </template>
+                    <button @click="currentPDFPage < 6 ? currentPDFPage++ : null" class="px-2.5 py-1 bg-cyan-950 text-cyan-400 rounded-lg text-xs font-bold hover:bg-cyan-900 transition">Next &rarr;</button>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-6 bg-darkbg rounded-2xl border border-bordercolor text-xs md:text-sm text-zinc-300 leading-relaxed space-y-4">
+                <div class="flex justify-between items-center text-cyan-400 font-extrabold border-b border-bordercolor pb-2">
+                    <span x-text="'Handbook: ' + previewPDFItem.title"></span>
+                    <span x-text="'Page ' + currentPDFPage + ' of 6'"></span>
+                </div>
+
+                <div x-show="currentPDFPage === 1" class="space-y-3">
+                    <h4 class="text-base font-black text-white">Page 1: Executive Summary & Core Philosophy</h4>
+                    <p x-text="previewPDFItem.desc"></p>
+                    <p>Clean sport is foundational to elite athletic competition. Adhering to WADA 2026 standards ensures that talent, dedication, and training remain the sole determinants of sporting victory.</p>
+                </div>
+                <div x-show="currentPDFPage === 2" class="space-y-3">
+                    <h4 class="text-base font-black text-white">Page 2: Strict Liability Principle & Athlete Responsibilities</h4>
+                    <p>Under Article 2.1 of the World Anti-Doping Code, the principle of <strong>Strict Liability</strong> applies unconditionally. It is each athlete's personal duty to ensure that no prohibited substance enters their body.</p>
+                </div>
+                <div x-show="currentPDFPage === 3" class="space-y-3">
+                    <h4 class="text-base font-black text-white">Page 3: Risk Management & Nutritional Supplement Warnings</h4>
+                    <p>Nutritional and herbal supplements carry a significant risk of inadvertent positive doping tests due to cross-contamination or undeclared prohibited ingredients during manufacturing.</p>
+                </div>
+                <div x-show="currentPDFPage === 4" class="space-y-3">
+                    <h4 class="text-base font-black text-white">Page 4: Therapeutic Use Exemptions (TUE) Protocol</h4>
+                    <p>If an athlete has a documented medical condition requiring a medication that appears on the WADA Prohibited List, they may apply for a <strong>Therapeutic Use Exemption (TUE)</strong>.</p>
+                </div>
+                <div x-show="currentPDFPage === 5" class="space-y-3">
+                    <h4 class="text-base font-black text-white">Page 5: Sample Collection & Athlete Rights</h4>
+                    <p>Testing procedures follow rigorous chain-of-custody protocols. Athletes have the right to representation, notification of rights, and documentation of any procedural anomalies.</p>
+                </div>
+                <div x-show="currentPDFPage === 6" class="space-y-3">
+                    <h4 class="text-base font-black text-white">Page 6: Compliance Audit & Conclusion</h4>
+                    <p>Regular educational compliance ensures athletes and coaches maintain absolute alignment with NADA and WADA 2026 regulations. Keep records updated in your CleanSport portal.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QUIZ COMPLETION POPUP MODAL -->
+    <div x-show="showQuizCompleteModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" style="display: none;">
+        <div class="bg-cardbg border border-cyan-500/50 rounded-3xl p-8 max-w-md w-full shadow-2xl text-center space-y-6 relative">
+            <div class="w-16 h-16 bg-cyan-500/20 text-cyan-400 rounded-2xl mx-auto flex items-center justify-center text-3xl font-black border border-cyan-500/30">🏆</div>
+            <div>
+                <h3 class="text-2xl font-black text-white" x-text="t('quiz_complete_title')">Quiz Assessment Completed!</h3>
+                <p class="text-xs text-zinc-400 mt-1" x-text="t('quiz_complete_desc')">You have successfully finished all 20 anti-doping evaluation questions.</p>
+            </div>
+            <div class="bg-darkbg p-6 rounded-2xl border border-bordercolor space-y-2">
+                <p class="text-xs text-zinc-400 font-bold uppercase tracking-wider" x-text="t('final_score_label')">Final Achieved Score</p>
+                <h2 class="text-4xl font-black text-cyan-400" x-text="quizScore + ' / 200'"></h2>
+                <p class="text-xs text-emerald-400 font-semibold pt-1" x-text="quizScore >= 140 ? '✓ Certificate Eligible & Compliant' : 'Review Study Materials & Retake'">✓ Certificate Eligible</p>
+            </div>
+            <button @click="showQuizCompleteModal = false; activeTab = 'home'" class="w-full py-3.5 bg-cyan-600 hover:bg-cyan-500 text-white font-extrabold rounded-2xl text-xs transition shadow-lg shadow-cyan-600/30" x-text="t('back_home_btn')">Return to Home Dashboard</button>
+        </div>
+    </div>
+
+    <!-- ALPINE.JS APP LOGIC -->
+    <script>
+        function cleanSportApp() {
+            return {
+                activeTab: 'home',
+                lang: 'en',
+                currentUser: null,
+                searchQuery: '',
+                loginEmail: '',
+                loginPassword: '',
+                loginError: '',
+                showModal: false,
+                showPDFModal: false,
+                showQuizCompleteModal: false,
+                currentPDFPage: 1,
+                modalItem: { name: '', category: '', status: '', desc: '' },
+                previewPDFItem: { title: '', desc: '' },
+                
+                // Quiz Timer & State
+                quizTimeLeft: 600, // 10 minutes in seconds
+                quizTimerInterval: null,
+
+                // Chatbot state
+                chatInputQuery: '',
+                chatMessages: [
+                    { sender: 'ai', text: 'Hello! I am your CleanSport 2026 AI Advisor. Ask me anything about WADA rules, prohibited substances, or TUE applications.' }
+                ],
+
+                // 50 WADA Prohibited & Regulated Substances Database
+                substances: [
+                    { name: 'Testosterone & Esters', category: 'S1. Anabolic Agents', status: 'Prohibited', desc: 'Primary endogenous anabolic steroid and synthetic derivatives that increase muscle mass.' },
+                    { name: 'Nandrolone (19-Norandrosterone)', category: 'S1. Anabolic Agents', status: 'Prohibited', desc: 'Powerful anabolic steroid enhancing nitrogen retention and recovery.' },
+                    { name: 'Stanozolol', category: 'S1. Anabolic Agents', status: 'Prohibited', desc: 'Synthetic anabolic steroid derived from testosterone promoting lean tissue growth.' },
+                    { name: 'Oxandrolone', category: 'S1. Anabolic Agents', status: 'Prohibited', desc: 'Oral anabolic steroid designed for minimal androgenic activity.' },
+                    { name: 'Methandienone (Dianabol)', category: 'S1. Anabolic Agents', status: 'Prohibited', desc: 'Renowned oral steroid that significantly increases protein synthesis.' },
+                    { name: 'Boldenone', category: 'S1. Anabolic Agents', status: 'Prohibited', desc: 'Veterinary steroid used illicitly for endurance and muscle hardness.' },
+                    { name: 'Trenbolone', category: 'S1. Anabolic Agents', status: 'Prohibited', desc: 'Extremely potent veterinary anabolic steroid with high binding affinity.' },
+                    { name: 'Drostanolone', category: 'S1. Anabolic Agents', status: 'Prohibited', desc: 'Dihydrotestosterone derivative acting as an anti-estrogenic agent.' },
+                    { name: 'Clostebol', category: 'S1. Anabolic Agents', status: 'Prohibited', desc: 'Chlorinated derivative of testosterone with anabolic properties.' },
+                    { name: 'Metenolone', category: 'S1. Anabolic Agents', status: 'Prohibited', desc: 'Long-acting mild anabolic agent used during cutting cycles.' },
+                    
+                    { name: 'Erythropoietin (EPO)', category: 'S2. Peptide Hormones', status: 'Prohibited', desc: 'Stimulates red blood cell production, increasing oxygen delivery to muscles.' },
+                    { name: 'Darbepoetin Alfa (NESP)', category: 'S2. Peptide Hormones', status: 'Prohibited', desc: 'Synthetic erythropoiesis-stimulating protein with extended half-life.' },
+                    { name: 'Human Growth Hormone (hGH)', category: 'S2. Peptide Hormones', status: 'Prohibited', desc: 'Peptide hormone stimulating tissue growth, cell regeneration, and metabolism.' },
+                    { name: 'Corticotropin (ACTH)', category: 'S2. Peptide Hormones', status: 'Prohibited', desc: 'Stimulates adrenal cortex to secrete natural glucocorticosteroids.' },
+                    { name: 'Insulin-like Growth Factor (IGF-1)', category: 'S2. Peptide Hormones', status: 'Prohibited', desc: 'Mediates growth hormone effects on skeletal muscle and bone.' },
+                    { name: 'Chorionic Gonadotropin (hCG)', category: 'S2. Peptide Hormones', status: 'Prohibited', desc: 'Stimulates endogenous testosterone production in males.' },
+                    { name: 'Luteinizing Hormone (LH)', category: 'S2. Peptide Hormones', status: 'Prohibited', desc: 'Pituitary hormone regulating gonadal steroidogenesis.' },
+                    { name: 'Thymosin Beta-4', category: 'S2. Peptide Hormones', status: 'Prohibited', desc: 'Regulates actin polymerization and tissue repair mechanisms.' },
+                    { name: 'Mechano Growth Factor (MGF)', category: 'S2. Peptide Hormones', status: 'Prohibited', desc: 'Splice variant of IGF-1 promoting muscle hypertrophy.' },
+                    { name: 'CERA (Continuous Erythropoietin Receptor Activator)', category: 'S2. Peptide Hormones', status: 'Prohibited', desc: 'Pegylated synthetic erythropoiesis activator.' },
+
+                    { name: 'Salbutamol (Inhaled)', category: 'S3. Beta-2 Agonists', status: 'TUE Required', desc: 'Permitted up to specific dosage limits for asthma treatment; TUE required above threshold.' },
+                    { name: 'Formoterol', category: 'S3. Beta-2 Agonists', status: 'TUE Required', desc: 'Long-acting beta-2 agonist permitted within strict inhalation dosage limits.' },
+                    { name: 'Salmeterol', category: 'S3. Beta-2 Agonists', status: 'TUE Required', desc: 'Maintains bronchodilation in asthmatic athletes under therapeutic guidelines.' },
+                    { name: 'Clenbuterol', category: 'S3. Beta-2 Agonists', status: 'Prohibited', desc: 'Potent beta-2 agonist and thermogenic agent prohibited at all times.' },
+                    { name: 'Terbutaline', category: 'S3. Beta-2 Agonists', status: 'TUE Required', desc: 'Bronchodilator requiring declared therapeutic use exemption.' },
+                    { name: 'Vilanterol', category: 'S3. Beta-2 Agonists', status: 'TUE Required', desc: 'Ultra-long-acting bronchodilator regulated under inhalation caps.' },
+                    { name: 'Higenamine', category: 'S3. Beta-2 Agonists', status: 'Prohibited', desc: 'Natural stimulant found in herbal products acting as a beta-agonist.' },
+                    { name: 'Vilanterol Trifenatate', category: 'S3. Beta-2 Agonists', status: 'TUE Required', desc: 'Prescription inhalation agent subject to threshold monitoring.' },
+                    { name: 'Indacaterol', category: 'S3. Beta-2 Agonists', status: 'TUE Required', desc: 'Once-daily bronchodilator requiring clinical documentation.' },
+                    { name: 'Olodaterol', category: 'S3. Beta-2 Agonists', status: 'TUE Required', desc: 'Long-acting respiratory medication with strict dosage ceilings.' },
+
+                    { name: 'Letrozole', category: 'S4. Hormone Modulators', status: 'Prohibited', desc: 'Aromatase inhibitor preventing estrogen conversion and boosting testosterone.' },
+                    { name: 'Anastrozole', category: 'S4. Hormone Modulators', status: 'Prohibited', desc: 'Potent non-steroidal aromatase inhibitor.' },
+                    { name: 'Tamoxifen', category: 'S4. Hormone Modulators', status: 'Prohibited', desc: 'Selective estrogen receptor modulator (SERM).' },
+                    { name: 'Clomifene', category: 'S4. Hormone Modulators', status: 'Prohibited', desc: 'Stimulates gonadotropin release by blocking estrogen feedback.' },
+                    { name: 'Meldonium', category: 'S4. Hormone Modulators', status: 'Prohibited', desc: 'Metabolic modulator enhancing cellular endurance and fat oxidation.' },
+                    { name: 'Trimetazidine', category: 'S4. Hormone Modulators', status: 'Prohibited', desc: 'Anti-ischemic metabolic agent improving myocardial glucose utilization.' },
+                    { name: 'Insulin', category: 'S4. Hormone Modulators', status: 'TUE Required', desc: 'Regulates glucose uptake; permitted solely for certified Type 1 diabetes via TUE.' },
+                    { name: 'Raloxifene', category: 'S4. Hormone Modulators', status: 'Prohibited', desc: 'SERM prohibited under anti-doping hormone regulation.' },
+                    { name: 'Exemestane', category: 'S4. Hormone Modulators', status: 'Prohibited', desc: 'Steroidal aromatase inactivator.' },
+                    { name: 'Fulvestrant', category: 'S4. Hormone Modulators', status: 'Prohibited', desc: 'Estrogen receptor antagonist.' },
+
+                    { name: 'Furosemide', category: 'S5. Diuretics & Masking Agents', status: 'Prohibited', desc: 'Loop diuretic used for rapid weight loss or flushing other substances.' },
+                    { name: 'Hydrochlorothiazide', category: 'S5. Diuretics & Masking Agents', status: 'Prohibited', desc: 'Thiazide diuretic acting as a masking agent.' },
+                    { name: 'Spironolactone', category: 'S5. Diuretics & Masking Agents', status: 'Prohibited', desc: 'Potassium-sparing diuretic.' },
+                    { name: 'Probenecid', category: 'S5. Diuretics & Masking Agents', status: 'Prohibited', desc: 'Renal tubular blocking agent preventing excretion of doping agents.' },
+                    { name: 'Amiloride', category: 'S5. Diuretics & Masking Agents', status: 'Prohibited', desc: 'Potassium-sparing diuretic.' },
+                    { name: 'Mannitol', category: 'S5. Diuretics & Masking Agents', status: 'Prohibited', desc: 'Intravenous plasma expander prohibited outside clinical emergencies.' },
+                    { name: 'Desmopressin', category: 'S5. Diuretics & Masking Agents', status: 'Prohibited', desc: 'Synthetic analog of vasopressin affecting water retention.' },
+                    { name: 'Indapamide', category: 'S5. Diuretics & Masking Agents', status: 'Prohibited', desc: 'Sulfonamide diuretic.' },
+                    { name: 'Torasemide', category: 'S5. Diuretics & Masking Agents', status: 'Prohibited', desc: 'High-ceiling loop diuretic.' },
+                    { name: 'Bumetanide', category: 'S5. Diuretics & Masking Agents', status: 'Prohibited', desc: 'Potent loop diuretic.' }
+                ],
+
+                // Official Anti-Doping Study PDFs
+                pdfList: [
+                    { id: 1, title: 'WADA 2026 Prohibited List Overview', badge: 'Official Guide', desc: 'Comprehensive guide detailing all prohibited classes, threshold limits, and monitoring programs.' },
+                    { id: 2, title: 'Athlete Guide to Therapeutic Use Exemptions (TUE)', badge: 'Medical Handbook', desc: 'Step-by-step instructions for submitting legitimate medical documentation for regulated medications.' },
+                    { id: 3, title: 'Supplement Risks & Contamination Analysis', badge: 'Safety Advisory', desc: 'In-depth research on inadvertent doping risks associated with unregulated nutritional supplements.' },
+                    { id: 4, title: 'Strict Liability & Legal Responsibilities', badge: 'Legal Framework', desc: 'Detailed breakdown of Article 2.1 responsibilities and tribunal precedents for athletes and coaches.' },
+                    { id: 5, title: 'Sample Collection & Chain of Custody Protocol', badge: 'Testing Manual', desc: 'Step-by-step documentation of urine and blood sample collection procedures during in-competition testing.' },
+                    { id: 6, title: 'Coach Integrity & Anti-Doping Governance', badge: 'Leadership Guide', desc: 'Essential compliance strategies and education mandates for national coaches and federation advisors.' },
+                    { id: 7, title: 'Global Anti-Doping Statistics & Annual Review', badge: 'Research Report', desc: 'Comprehensive global analytical data, testing numbers, and compliance metrics across all sporting federations.' }
+                ],
+
+                // 20 Assessment Questions
+                activeQuizIndex: 0,
+                selectedOption: null,
+                quizScore: 0,
+                quizFeedback: '',
+                quizList: [
+                    { question: '1. What principle states that an athlete is personally responsible for any prohibited substance found in their bodily sample?', options: ['Strict Liability Principle', 'Therapeutic Exception Rule', 'Coach Liability Clause', 'Random Notification Policy'], correct: 0 },
+                    { question: '2. Which organization releases the annual international prohibited substance list?', options: ['International Olympic Committee', 'World Anti-Doping Agency (WADA)', 'National Sports Federation', 'Global Athletics Board'], correct: 1 },
+                    { question: '3. What does TUE stand for in anti-doping governance?', options: ['Total Urinalysis Evaluation', 'Therapeutic Use Exemption', 'Targeted Urine Extraction', 'Toxicological Universal Examination'], correct: 1 },
+                    { question: '4. Under WADA rules, what category do Anabolic Androgenic Steroids belong to?', options: ['S1. Anabolic Agents', 'S2. Peptide Hormones', 'S3. Beta-2 Agonists', 'S5. Diuretics'], correct: 0 },
+                    { question: '5. Which peptide hormone stimulates red blood cell production to increase oxygen delivery?', options: ['Insulin', 'Erythropoietin (EPO)', 'Somatotropin', 'Melatonin'], correct: 1 },
+                    { question: '6. Why are nutritional and herbal supplements considered high risk for athletes?', options: ['They are too expensive', 'They may contain undeclared cross-contaminants or prohibited substances', 'They are illegal to buy', 'They automatically trigger a TUE'], correct: 1 },
+                    { question: '7. What is the primary function of diuretics and masking agents in sport?', options: ['To build muscle mass', 'To increase endurance', 'To accelerate urine production or mask other prohibited substances', 'To reduce joint inflammation'], correct: 2 },
+                    { question: '8. Which of the following beta-2 agonists is permitted only up to specific inhalation dosage thresholds without a retroactive TUE?', options: ['Clenbuterol', 'Salbutamol', 'Higenamine', 'Formoterol over 54mcg'], correct: 1 },
+                    { question: '9. Who is primarily responsible for ensuring no prohibited substance enters an athlete’s body?', options: ['The team doctor', 'The national coach', 'The athlete themselves', 'The testing official'], correct: 2 },
+                    { question: '10. What is the minimum sanction period typically mandated for a first-time intentional doping offense under the WADA Code?', options: ['1 month', '6 months', '2 to 4 years', 'Lifetime ban immediately'], correct: 2 },
+                    { question: '11. Which organization handles anti-doping compliance and testing at the national level in India?', options: ['BCCI', 'National Anti-Doping Agency (NADA India)', 'Sports Ministry Only', 'Indian Olympic Association'], correct: 1 },
+                    { question: '12. What does ADAMS stand for in the context of anti-doping data management?', options: ['Anti-Doping Administration and Management System', 'Athlete Drug Assessment and Monitoring Service', 'Active Doping Audit Management Software', 'Advanced Doping Analysis Measurement Standard'], correct: 0 },
+                    { question: '13. What is the status of Beta-Blockers in precision sports like shooting and archery?', options: ['Permitted freely', 'Prohibited in-competition', 'Prohibited out-of-competition only', 'Always encouraged'], correct: 1 },
+                    { question: '14. What document must an athlete provide during sample collection to verify their identity?', options: ['Passport or official government photo ID', 'A gym membership card', 'Driver license only', 'Team jersey'], correct: 0 },
+                    { question: '15. During sample collection, what is the minimum required volume for a urine sample split into Sample A and B?', options: ['20 mL', '90 mL', '150 mL', '500 mL'], correct: 1 },
+                    { question: '16. What is the purpose of the "Whereabouts" filing requirement for elite registered testing pools?', options: ['To track vacations', 'To enable unannounced out-of-competition testing', 'To schedule training sessions', 'To calculate prize money'], correct: 1 },
+                    { question: '17. What does a "Whereabouts Failure" (filing failure or missed test) accumulate toward?', options: ['An automatic championship medal', 'A potential anti-doping rule violation (ADRV)', 'A coaching bonus', 'A dietary recommendation'], correct: 1 },
+                    { question: '18. Which hormone modulators category includes aromatase inhibitors that prevent estrogen conversion?', options: ['S4. Hormone Modulators', 'S1. Anabolic Agents', 'S3. Beta-2 Agonists', 'S5. Masking Agents'], correct: 0 },
+                    { question: '19. Can an athlete apply for a retroactive TUE in emergency medical situations?', options: ['No, never', 'Yes, under specific acute emergency clinical criteria', 'Only after failing a test twice', 'Only if approved by the coach'], correct: 1 },
+                    { question: '20. What is the core vision and philosophy of the CleanSport initiative?', options: ['Winning at any cost', 'Fair play, athlete health, and absolute integrity through education', 'Minimizing drug testing costs', 'Promoting supplement use'], correct: 1 }
+                ],
+
+                get currentQuiz() {
+                    return this.quizList[this.activeQuizIndex];
+                },
+
+                get filteredSubstances() {
+                    if (!this.searchQuery) return this.substances;
+                    const q = this.searchQuery.toLowerCase();
+                    return this.substances.filter(s => s.name.toLowerCase().includes(q) || s.category.toLowerCase().includes(q) || s.status.toLowerCase().includes(q));
+                },
+
+                toggleLang() {
+                    this.lang = this.lang === 'en' ? 'hi' : 'en';
+                },
+
+                formatTime(seconds) {
+                    const mins = Math.floor(seconds / 60);
+                    const secs = seconds % 60;
+                    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                },
+
+                startQuizSession() {
+                    this.activeTab = 'quizzes';
+                    this.activeQuizIndex = 0;
+                    this.quizScore = 0;
+                    this.selectedOption = null;
+                    this.quizFeedback = '';
+                    this.quizTimeLeft = 600; // Reset to 10 mins
+
+                    if (this.quizTimerInterval) clearInterval(this.quizTimerInterval);
+                    this.quizTimerInterval = setInterval(() => {
+                        if (this.quizTimeLeft > 0 && this.activeTab === 'quizzes') {
+                            this.quizTimeLeft--;
+                        } else if (this.quizTimeLeft === 0) {
+                            clearInterval(this.quizTimerInterval);
+                            this.showQuizCompleteModal = true;
+                        }
+                    }, 1000);
+                },
+
+                t(key) {
+                    const dict = {
+                        en: {
+                            sub_brand: 'WADA 2026 Integrity Platform',
+                            nav_home: 'Home',
+                            nav_substances: 'Substance Database',
+                            nav_study: 'Study PDFs',
+                            nav_quizzes: 'Quizzes',
+                            nav_dashboard: 'Dashboard',
+                            nav_login: 'Secure Portal Login',
+                            logout: 'Logout',
+                            badge_wada: 'WADA 2026 Standards Compliant',
+                            hero_title: 'Education & <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-teal-300">Awareness Platform</span>',
+                            hero_desc: 'Effective use of digital technology for dissemination of anti-doping information. Empowering athletes and coaches with verified substance databases, PDF study resources, and comprehensive assessment quizzes.',
+                            btn_substances: 'Explore Substances',
+                            btn_quiz: 'Take Assessment Quiz',
+                            stat_athletes: 'Registered Athletes',
+                            stat_athletes_sub: '✓ Distributed to 20 Coaches',
+                            stat_coaches: 'Expert Coaches',
+                            stat_coaches_sub: '✓ WADA Certified Advisors',
+                            stat_substances: 'Prohibited Substances',
+                            stat_substances_sub: '✓ WADA 2026 Verified List',
+                            stat_compliance: 'Learning Compliance',
+                            stat_compliance_sub: '✓ Active Completion Rate',
+                            sub_db_title: 'WADA Prohibited Substance Database',
+                            sub_db_desc: 'Explore regulated categories, medical uses, and detailed compliance guidance.',
+                            search_placeholder: 'Search substances or categories...',
+                            verified_wada: 'WADA 2026 Verified',
+                            view_guidance: 'View Guidance →',
+                            pdf_section_title: 'Official Anti-Doping Study PDFs',
+                            pdf_section_desc: 'Preview official WADA & NADA compliant educational handbooks featuring proper 6-page structured content.',
+                            preview_btn: '📖 View PDF (6 Pages)',
+                            quiz_progress: 'Assessment Question ',
+                            score_label: 'Score:',
+                            submit_answer: 'Submit Answer & Next →',
+                            login_title: 'Secure Portal Login',
+                            login_subtitle: 'Authenticate using Google OAuth or name-only email',
+                            google_btn: 'Continue with Google OAuth 2.0',
+                            or_email: 'Or with email',
+                            email_label: 'Email Address (Name letters only, e.g. rajesh@gmail.com)',
+                            password_label: 'Password (Min 8 chars, Uppercase, Lowercase, Number)',
+                            login_btn: 'Login to Platform',
+                            admin_dash_title: 'Admin Control Dashboard',
+                            admin_dash_desc: 'Full platform management, athlete assignments, and system audit logs.',
+                            admin_badge: 'Super Admin Active',
+                            athlete_dash_title: 'Athlete Learning Dashboard',
+                            athlete_dash_desc: 'Track your anti-doping education progress and quiz scores.',
+                            learning_progress: 'Learning Progress',
+                            quiz_avg: 'Quiz Score Average',
+                            cert_eligible: '✓ Certificate Eligible',
+                            assigned_status: 'Assigned Status',
+                            clean_verified: 'Clean Sport Verified',
+                            last_verified: 'Last verified: WADA 2026',
+                            chat_title: 'CleanSport AI Advisor',
+                            chat_send: 'Send',
+                            close_modal: 'Close Guidance Panel',
+                            quiz_complete_title: 'Quiz Assessment Completed!',
+                            quiz_complete_desc: 'You have successfully finished all 20 anti-doping evaluation questions.',
+                            final_score_label: 'Final Achieved Score',
+                            back_home_btn: 'Return to Home Dashboard'
+                        },
+                        hi: {
+                            sub_brand: 'वाडा 2026 इंटीग्रिटी प्लेटफॉर्म',
+                            nav_home: 'होम',
+                            nav_substances: 'पदार्थ डेटाबेस',
+                            nav_study: 'अध्ययन पीडीएफ',
+                            nav_quizzes: 'प्रश्ोत्तरी',
+                            nav_dashboard: 'डैशबोर्ड',
+                            nav_login: 'सुरक्षित पोर्टल लॉगिन',
+                            logout: 'लॉग आउट',
+                            badge_wada: 'वाडा 2026 मानकों के अनुरूप',
+                            hero_title: 'शिक्षा और <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-teal-300">जागरूकता मंच</span>',
+                            hero_desc: 'डोपिंग विरोधी जानकारी के प्रसार के लिए डिजिटल तकनीक का प्रभावी उपयोग। सत्यापित पदार्थ डेटाबेस, पीडीएफ अध्ययन संसाधनों और व्यापक मूल्यांकन क्विज़ के साथ एथलीटों और कोचों को सशक्त बनाना।',
+                            btn_substances: 'पदार्थ देखें',
+                            btn_quiz: 'मूल्यांकन क्विज़ दें',
+                            stat_athletes: 'पंजीकृत एथलीट',
+                            stat_athletes_sub: '✓ 20 कोचों को वितरित',
+                            stat_coaches: 'विशेषज्ञ कोच',
+                            stat_coaches_sub: '✓ वाडा प्रमाणित सलाहकार',
+                            stat_substances: 'प्रतिबंधित पदार्थ',
+                            stat_substances_sub: '✓ वाडा 2026 सत्यापित सूची',
+                            stat_compliance: 'सीखने की अनुपालन दर',
+                            stat_compliance_sub: '✓ सक्रिय पूर्णता दर',
+                            sub_db_title: 'वाडा प्रतिबंधित पदार्थ डेटाबेस',
+                            sub_db_desc: 'विनियमित श्रेणियों, चिकित्सा उपयोग और विस्तृत अनुपालन मार्गदर्शन का अन्वेषण करें।',
+                            search_placeholder: 'पदार्थ या श्रेणी खोजें...',
+                            verified_wada: 'वाडा 2026 सत्यापित',
+                            view_guidance: 'मार्गदर्शन देखें →',
+                            pdf_section_title: 'आधिकारिक डोपिंग विरोधी अध्ययन पीडीएफ',
+                            pdf_section_desc: 'संरचित सामग्री के 6 उचित पृष्ठों वाली आधिकारिक वाडा और नाडा अनुपालन हैंडबुक का पूर्वावलोकन करें।',
+                            preview_btn: '📖 पीडीएफ देखें (6 पृष्ठ)',
+                            quiz_progress: 'मूल्यांकन प्रश्न ',
+                            score_label: 'स्कोर:',
+                            submit_answer: 'उत्तर जमा करें और आगे बढ़ें →',
+                            login_title: 'सुरक्षित पोर्टल लॉगिन',
+                            login_subtitle: 'गूगल OAuth या वैध नाम ईमेल का उपयोग करें',
+                            google_btn: 'गूगल OAuth 2.0 के साथ जारी रखें',
+                            or_email: 'या ईमेल के साथ',
+                            email_label: 'ईमेल पता (केवल नाम अक्षर, जैसे rajesh@gmail.com)',
+                            password_label: 'पासवर्ड (न्यूनतम 8 वर्ण, अपरकेस, लोअरकेस, अंक)',
+                            login_btn: 'प्लेटफॉर्म पर लॉगिन करें',
+                            admin_dash_title: 'एडमिन कंट्रोल डैशबोर्ड',
+                            admin_dash_desc: 'पूर्ण प्लेटफ़ॉर्म प्रबंधन, एथलीट असाइनमेंट और सिस्टम ऑडिट लॉग।',
+                            admin_badge: 'सुपर एडमिन सक्रिय',
+                            athlete_dash_title: 'एथलीट लर्निंग डैशबोर्ड',
+                            athlete_dash_desc: 'अपनी डोपिंग विरोधी शिक्षा प्रगति और क्विज़ स्कोर को ट्रैक करें।',
+                            learning_progress: 'सीखने की प्रगति',
+                            quiz_avg: 'क्विज़ स्कोर औसत',
+                            cert_eligible: '✓ प्रमाणपत्र के योग्य',
+                            assigned_status: 'निर्दिष्ट स्थिति',
+                            clean_verified: 'क्लीन स्पोर्ट सत्यापित',
+                            last_verified: 'अंतिम सत्यापित: वाडा 2026',
+                            chat_title: 'क्लीनस्पोर्ट AI सलाहकार',
+                            chat_send: 'भेजें',
+                            close_modal: 'मार्गदर्शन पैनल बंद करें',
+                            quiz_complete_title: 'क्विज़ मूल्यांकन पूर्ण हुआ!',
+                            quiz_complete_desc: 'आपने सभी 20 डोपिंग विरोधी मूल्यांकन प्रश्न सफलतापूर्वक समाप्त कर लिए हैं।',
+                            final_score_label: 'अंतिम प्राप्त स्कोर',
+                            back_home_btn: 'होम डैशबोर्ड पर लौटें'
+                        }
+                    };
+                    return dict[this.lang][key] || key;
+                },
+
+                openGuidance(item) {
+                    this.modalItem = item;
+                    this.showModal = true;
+                },
+
+                previewPDF(pdf) {
+                    this.previewPDFItem = pdf;
+                    this.currentPDFPage = 1;
+                    this.showPDFModal = true;
+                },
+
+                submitQuizAnswer() {
+                    if (this.selectedOption === null) {
+                        this.quizFeedback = 'Please select an option first!';
+                        return;
+                    }
+                    if (this.selectedOption === this.currentQuiz.correct) {
+                        this.quizScore += 10;
+                        this.quizFeedback = 'Correct! Great job (+10 pts).';
+                    } else {
+                        this.quizFeedback = 'Incorrect. Review the WADA 2026 study guide.';
+                    }
+
+                    setTimeout(() => {
+                        this.selectedOption = null;
+                        this.quizFeedback = '';
+                        if (this.activeQuizIndex < this.quizList.length - 1) {
+                            this.activeQuizIndex++;
+                        } else {
+                            if (this.quizTimerInterval) clearInterval(this.quizTimerInterval);
+                            this.showQuizCompleteModal = true;
+                        }
+                    }, 1000);
+                },
+
+                googleOAuthLogin() {
+                    this.currentUser = { name: 'Rajesh Kumar (Google Auth)', role: 'Athlete' };
+                    this.activeTab = 'athlete-dash';
+                },
+
+                handleLogin() {
+                    this.loginError = '';
+
+                    // Check @gmail.com ending
+                    if (!this.loginEmail.endsWith('@gmail.com')) {
+                        this.loginError = 'Email must end with @gmail.com';
+                        return;
+                    }
+
+                    // Extract name part before @gmail.com
+                    const namePart = this.loginEmail.split('@')[0];
+
+                    // Validate: Name must contain ONLY letters (a-z, A-Z), NO numbers allowed
+                    const nameOnlyRegex = /^[a-zA-Z]+$/;
+                    if (!nameOnlyRegex.test(namePart)) {
+                        this.loginError = 'Invalid email name! Numbers are not allowed. Use letters only (e.g. rajesh@gmail.com)';
+                        return;
+                    }
+
+                    // Password validation: Min 8 chars, Uppercase, Lowercase, Number
+                    const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+                    if (!passRegex.test(this.loginPassword)) {
+                        this.loginError = 'Password must be min 8 chars with Uppercase, Lowercase, and Number.';
+                        return;
+                    }
+
+                    const isAdmin = namePart.toLowerCase().includes('admin');
+                    this.currentUser = {
+                        name: namePart,
+                        role: isAdmin ? 'Admin' : 'Athlete'
+                    };
+                    this.activeTab = isAdmin ? 'admin-dash' : 'athlete-dash';
+                },
+
+                logout() {
+                    this.currentUser = null;
+                    this.activeTab = 'home';
+                },
+
+                sendAIChatQuery() {
+                    if (!this.chatInputQuery.trim()) return;
+                    const q = this.chatInputQuery;
+                    this.chatMessages.push({ sender: 'user', text: q });
+                    this.chatInputQuery = '';
+
+                    setTimeout(() => {
+                        let reply = 'According to WADA 2026 guidelines, strict liability applies to all athletes. Please check the substance database or apply for a TUE if medical treatment is required.';
+                        const lower = q.toLowerCase();
+                        if (lower.includes('tue') || lower.includes('exemption')) {
+                            reply = 'A Therapeutic Use Exemption (TUE) allows athletes to take otherwise prohibited medications for diagnosed medical conditions under strict physician supervision.';
+                        } else if (lower.includes('strict liability')) {
+                            reply = 'Article 2.1 of the World Anti-Doping Code outlines that athletes are solely responsible for any prohibited substance found in their biological sample.';
+                        } else if (lower.includes('supplement')) {
+                            reply = 'Nutritional supplements carry high cross-contamination risks. Always verify batch-tested products certified by Informed Sport or NSF.';
+                        }
+                        this.chatMessages.push({ sender: 'ai', text: reply });
+                        
+                        const container = document.getElementById('chatContainer');
+                        if (container) {
+                            container.scrollTop = container.scrollHeight;
+                        }
+                    }, 600);
+                }
+            };
+        }
+    </script>
+</body>
+</html>
