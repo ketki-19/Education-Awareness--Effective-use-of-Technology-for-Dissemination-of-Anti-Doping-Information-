@@ -1,0 +1,2 @@
+# Education-Awareness--Effective-use-of-Technology-for-Dissemination-of-Anti-Doping-Information-
+This project aims to spread awareness about doping, prohibited substances, and the importance of fair play in sports through modern technology. Doping refers to the use of banned substances or methods to improve athletic performance artificially. It can negatively affect athletes' health, careers, and sports integrity. 
